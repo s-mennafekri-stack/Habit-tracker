@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Ultimate Daily Habits For Mr/Mrs Lamar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(120deg, #ffe6ec, #fff5f0);
+            padding: 30px;
+            transition: 0.3s;
+        }
+
+        .dark {
+            background: linear-gradient(120deg, #0f2027, #203a43, #2c5364);
+            color: #e6f0f5;
+        }
+
+        h1 {
+            text-align: center;
+            color: #b56576;
+        }
+
+        .dark h1 {
+            color: #4fc3f7;
+        }
+
+        .description {
+            text-align: center;
+            max-width: 700px;
+            margin: 10px auto 30px auto;
+            font-size: 14px;
+            line-height: 1.6;
+            opacity: 0;
+            transform: translateY(15px);
+            animation: fadeSlide 1s ease forwards;
+        }
+
+        @keyframes fadeSlide {
+            to {
+                opacity: 0.95;
+                transform: translateY(0);
+            }
+        }
+
+        input,
+        button {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #f3dede;
+            margin: 5px;
+        }
+
+        button {
+            background: #b56576;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .dark button {
+            background: #4fc3f7;
+            color: #0f2027;
+            font-weight: 600;
+        }
+
+        .habit-container {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+        }
+
+        .dark .habit-container {
+            background: #1b2a33;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(10, 22px);
+            gap: 6px;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #b56576;
+        }
+
+        .progress-container {
+            width: 60%;
+            height: 14px;
+            background: #ffe0e0;
+            border-radius: 20px;
+            margin: 30px auto;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #b56576, #ff9bb3);
+            transition: width 0.4s ease;
+        }
+
+        .dark .progress-bar {
+            background: linear-gradient(90deg, #4fc3f7, #1de9b6);
+        }
+
+        canvas {
+            max-width: 600px;
+            margin: 30px auto;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1 id="header">Better – Habits Tracker For Mr/Mrs Lamar</h1>
+
+    <div class="description">
+        This digital planner helps you build consistent daily habits that makes you a better version of yourself.
+        You Can add your own custom habits, edit or delete them anytime and track your completion over 30 days!
+        Your data is automatically saved in your browser, so it stays even after refreshing the page.
+        You can also monitor your sleep hours with a customizable tracker and switch between light for the lady and dark
+        mode for the gentleman.
+        anytime.
+    </div>
+
+    <div style="text-align:center;">
+        <input type="text" id="usernameInput" placeholder="Enter your name">
+        <button onclick="setName()">Save Name</button>
+        <button onclick="toggleDark()">Toggle Dark Mode</button>
+    </div>
+
+    <div style="text-align:center;">
+        <input type="text" id="habitInput" placeholder="Enter a habit">
+        <button onclick="addHabit()">Add Habit</button>
+    </div>
+
+    <div id="habitsWrapper"></div>
+
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <h2 style="text-align:center;">Sleep Tracker (Enter Hours)</h2>
+    <div style="text-align:center;">
+        <input type="number" id="sleepHours" placeholder="Hours slept">
+        <button onclick="addSleep()">Add Day</button>
+    </div>
+
+    <canvas id="sleepChart"></canvas>
+
+    <script>
+
+        let habits = JSON.parse(localStorage.getItem("habits")) || [];
+        let sleepData = JSON.parse(localStorage.getItem("sleepData")) || [];
+        let username = localStorage.getItem("username") || "";
+
+        const wrapper = document.getElementById("habitsWrapper");
+        const header = document.getElementById("header");
+
+        if (username) {
+            header.textContent = `Better ${username} – Digital Planner`;
+            document.getElementById("usernameInput").value = username;
+        }
+
+        function setName() {
+            username = document.getElementById("usernameInput").value.trim();
+            if (!username) return;
+            localStorage.setItem("username", username);
+            header.textContent = `Better ${username} – Digital Planner`;
+        }
+
+        function toggleDark() {
+            document.body.classList.toggle("dark");
+        }
+
+        function saveHabits() {
+            localStorage.setItem("habits", JSON.stringify(habits));
+        }
+
+        function addHabit() {
+            const habitName = document.getElementById("habitInput").value.trim();
+            if (!habitName) return;
+
+            habits.push({ name: habitName, checks: Array(30).fill(false) });
+            saveHabits();
+            document.getElementById("habitInput").value = "";
+            renderHabits();
+        }
+
+        function deleteHabit(index) {
+            habits.splice(index, 1);
+            saveHabits();
+            renderHabits();
+        }
+
+        function editHabit(index) {
+            const newName = prompt("Edit habit:", habits[index].name);
+            if (newName) {
+                habits[index].name = newName;
+                saveHabits();
+                renderHabits();
+            }
+        }
+
+        function toggleCheck(habitIndex, checkIndex) {
+            habits[habitIndex].checks[checkIndex] =
+                !habits[habitIndex].checks[checkIndex];
+            saveHabits();
+            updateProgress();
+        }
+
+        function renderHabits() {
+            wrapper.innerHTML = "";
+            habits.forEach((habit, i) => {
+                const container = document.createElement("div");
+                container.className = "habit-container";
+
+                container.innerHTML = `
+      <strong>${habit.name}</strong>
+      <button onclick="editHabit(${i})">Edit</button>
+      <button onclick="deleteHabit(${i})">Delete</button>
+    `;
+
+                for (let r = 0; r < 3; r++) {
+                    const grid = document.createElement("div");
+                    grid.className = "grid";
+                    for (let c = 0; c < 10; c++) {
+                        const index = r * 10 + c;
+                        const checkbox = document.createElement("input");
+                        checkbox.type = "checkbox";
+                        checkbox.checked = habit.checks[index];
+                        checkbox.onclick = () => toggleCheck(i, index);
+                        grid.appendChild(checkbox);
+                    }
+                    container.appendChild(grid);
+                }
+
+                wrapper.appendChild(container);
+            });
+
+            updateProgress();
+        }
+
+        function updateProgress() {
+            let total = 0;
+            let checked = 0;
+
+            habits.forEach(h => {
+                h.checks.forEach(c => {
+                    total++;
+                    if (c) checked++;
+                });
+            });
+
+            if (total === 0) return;
+
+            const percent = Math.round((checked / total) * 100);
+            document.getElementById("progressBar").style.width = percent + "%";
+        }
+
+        const ctx = document.getElementById("sleepChart").getContext("2d");
+
+        let chart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: sleepData.map((_, i) => i + 1),
+                datasets: [{
+                    label: "Hours Slept",
+                    data: sleepData,
+                    tension: 0.3,
+                    fill: false
+                }]
+            },
+            options: {
+                scales: {
+                    x: { title: { display: true, text: "Day" } },
+                    y: { title: { display: true, text: "Hours" } }
+                }
+            }
+        });
+
+        function addSleep() {
+            const hours = parseFloat(document.getElementById("sleepHours").value);
+            if (isNaN(hours)) return;
+
+            sleepData.push(hours);
+            localStorage.setItem("sleepData", JSON.stringify(sleepData));
+            document.getElementById("sleepHours").value = "";
+            updateChart();
+        }
+
+        function updateChart() {
+            chart.data.labels = sleepData.map((_, i) => i + 1);
+            chart.data.datasets[0].data = sleepData;
+            chart.update();
+        }
+
+        renderHabits();
+        updateChart();
+
+    </script>
+
+</body>
+
+</html>
